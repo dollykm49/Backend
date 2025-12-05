@@ -1,8 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from typing import Dict
 import uuid
 
-from app.services import storage, preprocessing, grading, reports
+from app.services import storage, openai_hybrid_grading, pdf_reports
 
 router = APIRouter()
 
@@ -12,44 +11,55 @@ async def grade_comic(
     user_id: str = Form(...),
     front: UploadFile = File(...),
     back: UploadFile = File(...),
-) -> Dict:
-    """Upload front/back images, run grading pipeline, and return results.
-
-    This endpoint:
-    - creates the folder structure for this comic
-    - stores originals
-    - runs preprocessing
-    - computes subgrades + final grade
-    - saves analysis JSON
-    - generates a PDF report
-    """
+):
     if not front.filename or not back.filename:
         raise HTTPException(status_code=400, detail="Both front and back images are required.")
 
     comic_id = str(uuid.uuid4())
 
-    # Prepare directory structure
+    # 1) Create directory structure
     dirs = storage.create_comic_directories(user_id, comic_id)
 
-    # Save originals
+    # 2) Save originals
     original_paths = await storage.save_original_uploads(front, back, dirs["original"])
 
-    # Preprocess images
-    processed_paths = preprocessing.process_images(original_paths, dirs["processed"])
+    # 3) Hybrid AI + algorithm grading
+    try:
+        grading_result = openai_hybrid_grading.grade_comic(
+            front_path=original_paths["front"],
+            back_path=original_paths["back"],
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI grading failed: {e}")
 
-    # Compute grades
-    subgrades = grading.grade_comic(processed_paths)
+    # grading_result shape:
+    # {
+    #   "subgrades": { ... },
+    #   "final": number,
+    #   "notes": "text",
+    #   "confidence": number (0-1),
+    #   "flags": {...}
+    # }
 
-    # Save analysis JSON
-    analysis_path = storage.save_analysis(subgrades, dirs["analysis"])
+    # 4) Save analysis JSON
+    analysis_path = storage.save_analysis(grading_result, dirs["analysis"])
 
-    # Generate PDF report
-    report_path = reports.generate_report(user_id, comic_id, subgrades, dirs["reports"])
+    # 5) Generate PDF report
+    report_path = pdf_reports.generate_report(
+        user_id=user_id,
+        comic_id=comic_id,
+        grading_result=grading_result,
+        report_dir=dirs["reports"],
+    )
 
     return {
         "user_id": user_id,
         "comic_id": comic_id,
-        "subgrades": subgrades,
+        "subgrades": grading_result["subgrades"],
+        "final": grading_result["final"],
+        "notes": grading_result["notes"],
+        "confidence": grading_result["confidence"],
+        "flags": grading_result.get("flags", {}),
         "analysis_path": str(analysis_path),
         "report_path": str(report_path),
     }
