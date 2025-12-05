@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import uuid
 
-from app.services import storage, openai_hybrid_grading, pdf_reports
+from app.services import storage, openai_hybrid_grading, reports
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ async def grade_comic(
     analysis_path = storage.save_analysis(grading_result, dirs["analysis"])
 
     # 5) Generate PDF report
-    report_path = pdf_reports.generate_report(
+    report_path = reports.generate_report(
         user_id=user_id,
         comic_id=comic_id,
         grading_result=grading_result,
