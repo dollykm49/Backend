@@ -21,6 +21,17 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root():
+    """Provide a simple landing message so deployed instances don't return 404."""
+    return {
+        "message": "ComicVault Platinum Grading Backend",
+        "docs": "/docs",
+        "health": "/health",
+        "grade_endpoint": "/api/comics/grade",
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

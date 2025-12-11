@@ -13,6 +13,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/")
+def root():
+    """Provide a landing response for deployed instances."""
+    return {
+        "message": "ComicVault Scanning Backend",
+        "docs": "/docs",
+        "health": "/health",
+        "grade_endpoint": "/api/comics/grade",
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
