@@ -7,14 +7,19 @@ app = FastAPI(
     version="1.0.0",
     description="Hybrid OpenAI + algorithmic comic grading with PDF reports."
 )
-
-app.add_middleware(
+ app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # lock this down later
+    allow_origins=[
+        "https://vaultmycomic.com",
+        "https://www.vaultmycomic.com",
+        "http://localhost:5173",
+        "http://localhost:5177"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/health")
 def health_check():
