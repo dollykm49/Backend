@@ -1,29 +1,32 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.routes import comics
 
-app = FastAPI(
-    title="ComicVault Platinum Grading Backend",
-    version="1.0.0",
-    description="Hybrid OpenAI + algorithmic comic grading with PDF reports."
-)
+app = FastAPI(title="ComicVault Scanning Backend", version="1.0.0")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://vaultmycomic.com",
-        "https://www.vaultmycomic.com",
-        "http://localhost:5173",
-        "http://localhost:5177"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+def root():
+    """Provide a landing response for deployed instances."""
+    return {
+        "message": "ComicVault Scanning Backend",
+        "docs": "/docs",
+        "health": "/health",
+        "grade_endpoint": "/api/comics/grade",
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-app.include_router(comics.router, prefix="/api/comics", tags=["comics"])
 
