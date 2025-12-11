@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def root():
     """Provide a simple landing message so deployed instances don't return 404."""
     return {
